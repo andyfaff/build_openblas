@@ -1,0 +1,55 @@
+name: Linux Build
+
+on:
+  schedule:
+  #        ┌───────────── minute (0 - 59)
+  #        │  ┌───────────── hour (0 - 23)
+  #        │  │ ┌───────────── day of the month (1 - 31)
+  #        │  │ │ ┌───────────── month (1 - 12 or JAN-DEC)
+  #        │  │ │ │ ┌───────────── day of the week (0 - 6 or SUN-SAT)
+  #        │  │ │ │ │
+  - cron: "9  9 * * 6"
+  # push:
+  pull_request:
+    branches:
+      - main
+      - maintenance/**
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build_openblas:
+    name: Build wheel for {{ matrix.buildplat[1] }} ${{ matrix.buildplat[2] }}
+    runs-on: ${{ matrix.buildplat[0] }}
+
+    strategy:
+      # Ensure that a wheel builder finishes even if another fails
+      fail-fast: false
+      matrix:
+        # Github Actions doesn't support pairing matrix values together, let's improvise
+        # https://github.com/github/feedback/discussions/7835#discussioncomment-1769026
+        buildplat:
+        - [ubuntu-20.04, manylinux, x86_64]
+        # - [ubuntu-20.04, manylinux, aarch64]
+
+    steps:
+      - name: Checkout OpenBLAS
+        uses: actions/checkout@v3
+        with:
+          # Repository name with owner. For example, actions/checkout
+          # Default: ${{ github.repository }}
+          repository: xianyi/OpenBLAS
+          submodules: true
+
+      - uses: actions/setup-python@v4.2.0
+        with:
+          python-version: 3.x
+
+      - name: Set up QEMU
+        if: ${{ runner.os == 'Linux' && matrix.buildplat[2] == 'aarch64' }}
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: all
