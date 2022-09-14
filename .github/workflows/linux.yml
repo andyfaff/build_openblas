@@ -43,6 +43,12 @@ jobs:
           # Default: ${{ github.repository }}
           repository: xianyi/OpenBLAS
           submodules: true
+          path: OpenBLAS
+
+      - name: Checkout build_openblas
+        uses: actions/checkout@v3
+        with:
+          path: build_openblas
 
       - uses: actions/setup-python@v4.2.0
         with:
@@ -53,3 +59,18 @@ jobs:
         uses: docker/setup-qemu-action@v1
         with:
           platforms: all
+
+      - name: Setup environment
+        run: |
+          set -xe
+          sudo apt-get update
+          sudo apt install gfortran cmake build-essential
+
+      - name: Build OpenBlas
+        run: |
+          set -xe
+          cd OpenBLAS
+          mkdir build
+          cd build
+          cmake .. -G "Ninja" -DBUILD_WITHOUT_LAPACK=no -DNOFORTRAN=0 -DDYNAMIC_ARCH=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+          cmake --build . --config Release
